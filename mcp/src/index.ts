@@ -63,8 +63,21 @@ async function fetchReport(date: string, type: string): Promise<string> {
 // Tool handlers
 // ---------------------------------------------------------------------------
 
+/**
+ * Parse and clamp a caller-supplied "days" argument into [1, max].
+ * Guards against non-numeric, zero, or negative values, which would otherwise
+ * make Array.slice misbehave: slice(0, NaN) returns nothing, and slice(0, -5)
+ * drops the oldest entries instead of limiting the count (a size-dependent,
+ * nonsensical result). Invalid input falls back to the default.
+ */
+function clampDays(raw: unknown, fallback: number, max: number): number {
+  const n = Math.floor(Number(raw));
+  if (!Number.isFinite(n) || n < 1) return Math.min(fallback, max);
+  return Math.min(n, max);
+}
+
 async function toolListReports(args: Record<string, unknown>): Promise<string> {
-  const days = Math.min(Number(args["days"] ?? 7), 30);
+  const days = clampDays(args["days"], 7, 30);
   const { dates } = await fetchManifest();
   const slice = dates.slice(0, days);
 
@@ -97,9 +110,11 @@ async function toolGetLatest(args: Record<string, unknown>): Promise<string> {
 }
 
 async function toolSearch(args: Record<string, unknown>): Promise<string> {
-  const query = String(args["query"] ?? "").trim().toLowerCase();
+  const query = String(args["query"] ?? "")
+    .trim()
+    .toLowerCase();
   if (!query) throw new Error("'query' is required");
-  const days = Math.min(Number(args["days"] ?? 7), 14);
+  const days = clampDays(args["days"], 7, 14);
 
   const { dates } = await fetchManifest();
   const slice = dates.slice(0, days);
