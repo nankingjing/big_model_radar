@@ -51,8 +51,11 @@ function readWeeklyDigest(date: string): string | null {
 
 /** Format a date as ISO week string, e.g. "2026-W10". */
 function toWeekStr(date: Date): string {
-  // ISO week: week containing the first Thursday of the year
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  // ISO week: week containing the first Thursday of the year.
+  // Read the calendar date via UTC getters: callers pass a CST timestamp whose
+  // UTC fields hold the intended CST date, so local getters would shift the day
+  // (and thus the week/year) whenever the process runs outside UTC.
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
   d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   const week = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
