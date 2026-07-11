@@ -46,6 +46,38 @@ const SEARCH_QUERIES = [
 ];
 
 // ---------------------------------------------------------------------------
+// HTML entity decoding
+// ---------------------------------------------------------------------------
+
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: " ",
+};
+
+/**
+ * Decode the HTML entities that survive tag stripping on scraped github.com
+ * trending descriptions (e.g. `&amp;`, `&#39;`, `&lt;`). Handles named,
+ * decimal (`&#NN;`) and hex (`&#xNN;`) references in a single pass so
+ * already-decoded text and unknown entities are left untouched.
+ */
+function decodeHtmlEntities(text: string): string {
+  return text.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (match, entity: string) => {
+    if (entity[0] === "#") {
+      const codePoint =
+        entity[1] === "x" || entity[1] === "X"
+          ? parseInt(entity.slice(2), 16)
+          : parseInt(entity.slice(1), 10);
+      return Number.isNaN(codePoint) ? match : String.fromCodePoint(codePoint);
+    }
+    return NAMED_ENTITIES[entity.toLowerCase()] ?? match;
+  });
+}
+
+// ---------------------------------------------------------------------------
 // GitHub Trending HTML fetch
 // ---------------------------------------------------------------------------
 
@@ -79,11 +111,15 @@ async function fetchGitHubTrending(): Promise<{ repos: TrendingRepo[]; success: 
 
         // description from col-9 paragraph
         const descMatch = block.match(/<p[^>]*class="[^"]*col-9[^"]*"[^>]*>([\s\S]*?)<\/p>/);
-        const description = descMatch?.[1] ? descMatch[1].replace(/<[^>]+>/g, "").trim() : "";
+        const description = descMatch?.[1]
+          ? decodeHtmlEntities(descMatch[1].replace(/<[^>]+>/g, "").trim())
+          : "";
 
         // language
         const langMatch = block.match(/<span[^>]+itemprop="programmingLanguage"[^>]*>([\s\S]*?)<\/span>/);
-        const language = langMatch?.[1] ? langMatch[1].replace(/<[^>]+>/g, "").trim() : "";
+        const language = langMatch?.[1]
+          ? decodeHtmlEntities(langMatch[1].replace(/<[^>]+>/g, "").trim())
+          : "";
 
         // today stars
         const todayMatch = block.match(/([\d,]+)\s+stars?\s+today/i);
