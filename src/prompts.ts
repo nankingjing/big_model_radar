@@ -590,34 +590,20 @@ export function buildWebReportPrompt(
             ? `首次全量抓取（sitemap 共 ${totalDiscovered} 条 URL，以下为最新 ${newItems.length} 篇正文内容）`
             : `今日增量更新，共 ${newItems.length} 篇新内容`;
 
-      if (newItems.length === 0) {
-        const emptyMsg =
-          lang === "en"
-            ? `(${mode}, no content available for analysis.)`
-            : `（${mode}，暂无可供分析的内容。）`;
-        return `## ${siteName}\n\n${emptyMsg}`;
-      }
+      if (newItems.length === 0) return `## ${siteName}\n\n（${mode}，暂无可供分析的内容。）`;
 
       const unableToExtract = lang === "en" ? "(Unable to extract text content)" : "（无法提取文本内容）";
-      const itemLabels =
-        lang === "en"
-          ? { category: "Category", published: "Published/Updated", unknown: "Unknown", excerpt: "Excerpt" }
-          : { category: "分类", published: "发布/更新", unknown: "未知", excerpt: "内容节选" };
       const itemsText = newItems
         .map((item) =>
           [
             `### [${item.title || item.url}](${item.url})`,
-            `- ${itemLabels.category}: ${item.category} | ${itemLabels.published}: ${item.lastmod.slice(0, 10) || itemLabels.unknown}`,
-            `- ${itemLabels.excerpt}: ${item.content || unableToExtract}`,
+            `- 分类: ${item.category} | 发布/更新: ${item.lastmod.slice(0, 10) || "未知"}`,
+            `- 内容节选: ${item.content || unableToExtract}`,
           ].join("\n"),
         )
         .join("\n\n");
 
-      const sectionParen =
-        lang === "en"
-          ? `(${mode})`
-          : `（${mode}）`;
-      return `## ${siteName} ${sectionParen}\n\n${itemsText}`;
+      return `## ${siteName}（${mode}）\n\n${itemsText}`;
     })
     .join("\n\n---\n\n");
 
