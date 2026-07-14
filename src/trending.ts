@@ -71,7 +71,9 @@ function decodeHtmlEntities(text: string): string {
         entity[1] === "x" || entity[1] === "X"
           ? parseInt(entity.slice(2), 16)
           : parseInt(entity.slice(1), 10);
-      return Number.isNaN(codePoint) ? match : String.fromCodePoint(codePoint);
+      return Number.isNaN(codePoint) || codePoint > 0x10ffff
+        ? match
+        : String.fromCodePoint(codePoint);
     }
     return NAMED_ENTITIES[entity.toLowerCase()] ?? match;
   });
